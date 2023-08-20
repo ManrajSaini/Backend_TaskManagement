@@ -15,6 +15,14 @@ const taskSchema = new mongoose.Schema({
     },
     updatedAt: {
         type: String,
+    },
+    completedAt: {
+        type: String,
+    },
+    completionStatus: {
+        type: Boolean,
+        default: false,
+        required: true
     }
 });
 
