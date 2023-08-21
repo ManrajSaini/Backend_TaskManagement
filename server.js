@@ -25,22 +25,7 @@ app.use("/api/tasks", taskRouter);
 
 // Home Route
 app.get("/", (req,res) => {
-    const response = {
-        Success: "Sever is Running (Home)",
-        Routes: {
-            Home: ["/", "GET"],
-            CreateTask: ["/api/tasks", "POST"],
-            AllTasks: ["/api/tasks", "GET"],
-            SingleTask: ["/api/tasks/:id", "GET"],
-            UpdateTask: ["/api/tasks/:id", "PATCH"],
-            DeleteTask: ["/api/tasks/:id", "DELETE"]
-        }
-    };
-
-    const formattedResponse = JSON.stringify(response, null, 3);
-    const htmlResponse = `<pre>${formattedResponse}</pre>`;
-
-    res.send(htmlResponse);
+    res.send("Server is Running");
 });
 
 app.listen(9000 || process.env.PORT, () => {

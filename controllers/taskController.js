@@ -1,7 +1,11 @@
 const Task = require("../models/tasks");
+const User = require("../models/user");
 
 const createTask = async(req,res) => {
+    const user = await User.findOne({ _id: req.user._id });
+
     const task = new Task({
+        createdBy : user._id,
         title : req.body.title,
         desc : req.body.desc,
         createdAt : new Date().toLocaleString("en-Us", {timeZone: 'Asia/Kolkata'}),
@@ -48,6 +52,35 @@ const fetchAllTasks = async(req,res) => {
     }
 };
 
+const fetchUserTasks = async(req,res) => {
+    const user = await User.findOne({_id: req.user._id});
+
+    try {
+        const tasks = await Task.find();
+
+        const userTasks = tasks.filter(function(task){
+            if(task.createdBy.toString() === user._id.toString())
+                return task;
+        });
+
+        return res.status(201).send({
+            "success": true,
+            "error_code": null,
+            "message": "Successfully fetched all tasks",
+            "data": userTasks
+        });
+        
+    } catch (err) {
+        return res.send({
+            "success": false,
+            "error_code": 500,
+            "message": err.message,
+            "data": []
+        });
+    }
+};
+
+
 const fetchSingleTask = async(req,res) => {
     try {
         let id = req.params.id;
@@ -79,6 +112,8 @@ const fetchSingleTask = async(req,res) => {
 };
 
 const updateTaskDetails = async(req,res) => {
+    const user = await User.findOne({_id: req.user._id});
+
     try {
         let id = req.params.id;
         const task = await Task.findById(id);
@@ -89,6 +124,15 @@ const updateTaskDetails = async(req,res) => {
             "error_code": 404,
             "message": "Task does not exist",
             "data": []
+            });
+        }
+
+        if(task.createdBy.toString() !== user._id.toString()){
+            return res.send({
+                "success" : false,
+                "error_code": 404,
+                "message": "You are not assigned this task, So cannot update it",
+                "data": []
             });
         }
 
@@ -129,6 +173,8 @@ const updateTaskDetails = async(req,res) => {
 };
 
 const deleteTask = async(req,res) => {
+    const user = await User.findOne({ _id: req.user._id });
+
     try{
         let id = req.params.id;
         const task = await Task.findById(id);
@@ -142,6 +188,18 @@ const deleteTask = async(req,res) => {
             });
         }
 
+        // console.log(task.createdBy);
+        // console.log(user._id);
+
+        if(task.createdBy.toString() !== user._id.toString()){
+            return res.send({
+                "success" : false,
+                "error_code": 404,
+                "message": "You are not assigned this task, So cannot delete it",
+                "data": []
+            });
+        }
+
         await task.deleteOne();
         return res.send({
             "success" : true,
@@ -149,6 +207,7 @@ const deleteTask = async(req,res) => {
             "message": "Successfully deleted the task",
             "data": []
         });
+
     } catch(err){
         return res.send({
             "success" : false,
@@ -160,6 +219,8 @@ const deleteTask = async(req,res) => {
 };
 
 const completeTask = async(req,res) => {
+    const user = await User.findOne({ _id: req.user._id});
+
     try{
         let id = req.params.id;
         const task = await Task.findById(id);
@@ -169,6 +230,15 @@ const completeTask = async(req,res) => {
                 "success" : false,
                 "error_code": 404,
                 "message": "Task does not exist",
+                "data": []
+            });
+        }
+
+        if(task.createdBy.toString() !== user._id.toString()){
+            return res.send({
+                "success" : false,
+                "error_code": 404,
+                "message": "You are not assigned this task, So cannot complete it",
                 "data": []
             });
         }
@@ -212,6 +282,8 @@ const completeTask = async(req,res) => {
 
 
 const uncompleteTask = async(req,res) => {
+    const user = await User.findOne({ _id: req.user._id});
+
     try{
         let id = req.params.id;
         const task = await Task.findById(id);
@@ -221,6 +293,15 @@ const uncompleteTask = async(req,res) => {
                 "success" : false,
                 "error_code": 404,
                 "message": "Task does not exist",
+                "data": []
+            });
+        }
+
+        if(task.createdBy.toString() !== user._id.toString()){
+            return res.send({
+                "success" : false,
+                "error_code": 404,
+                "message": "You are not assigned this task, So cannot uncomplete it",
                 "data": []
             });
         }
@@ -290,7 +371,7 @@ const allCompletedTasks = async(req,res) => {
             "data": []
         });
     }
-}
+};
 
 
 const allUncompletedTasks = async(req,res) => {
@@ -318,17 +399,80 @@ const allUncompletedTasks = async(req,res) => {
             "data": []
         });
     }
-}
+};
+
+
+const userCompletedTasks = async(req,res) => {
+
+    const user = await User.findOne({ _id: req.user._id});
+    
+    try {
+        const tasks = await Task.find();
+
+        const completedTasks = tasks.filter(function(task){
+            if((user._id.toString() === task.createdBy.toString()) && (task.completionStatus === true))
+                return task;
+        });
+
+        return res.send({
+            "success" : true,
+            "error_code": null,
+            "message": "Successfully fetched all Completed tasks of a user",
+            "data": completedTasks
+        });
+
+    } catch (err) {
+        return res.send({
+            "success" : false,
+            "error_code": 500,
+            "message": err.message,
+            "data": []
+        });
+    }
+};
+
+
+const userUncompletedTasks = async(req,res) => {
+
+    const user = await User.findOne({ _id: req.user._id});
+    
+    try {
+        const tasks = await Task.find();
+
+        const uncompletedTasks = tasks.filter(function(task){
+            if((user._id.toString() === task.createdBy.toString()) && (task.completionStatus === false))
+                return task;
+        });
+
+        return res.send({
+            "success" : true,
+            "error_code": null,
+            "message": "Successfully fetched all unCompleted tasks of a user",
+            "data": uncompletedTasks
+        });
+
+    } catch (err) {
+        return res.send({
+            "success" : false,
+            "error_code": 500,
+            "message": err.message,
+            "data": []
+        });
+    }
+};
 
 
 module.exports = {
     createTask,
     fetchAllTasks,
+    fetchUserTasks,
     fetchSingleTask,
     updateTaskDetails,
     deleteTask,
     completeTask,
     uncompleteTask,
     allCompletedTasks,
-    allUncompletedTasks
+    allUncompletedTasks,
+    userCompletedTasks,
+    userUncompletedTasks
 };

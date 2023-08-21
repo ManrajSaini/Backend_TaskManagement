@@ -2,7 +2,6 @@ const dotenv = require("dotenv");
 const User = require("../models/user");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-const { now } = require("mongoose");
 
 dotenv.config();
 
@@ -46,6 +45,7 @@ const createUser = async (req, res) => {
 
 
 const deleteUser = async (req, res) => {
+    const loggedInUser = await User.findOne({_id: req.user._id});
 
     try{
         const id = req.params.id;
@@ -60,6 +60,15 @@ const deleteUser = async (req, res) => {
             });
         }
 
+        if(loggedInUser._id.toString() !== id.toString()){
+            return res.send({
+                "success": false,
+                "error_code": 404,
+                "message": "You cannot delete some other user",
+                "data": []
+            });
+        }
+
         await User.deleteOne(user);
         return res.status(200).send({
             "success": true,
@@ -67,6 +76,7 @@ const deleteUser = async (req, res) => {
             "message": "Successfully deleted the user",
             "data": []
         });
+
     } catch(err){
         return res.status(200).send({
             "success": false,
@@ -152,9 +162,8 @@ const loginUser = async(req,res) => {
             });
         }
 
-        const token = jwt.sign({ _id: user._id }, process.env.JWT_SECRET_KEY);
-
-        res.cookie("token", token, {httpOnly: true});
+        const token = jwt.sign({ _id: user._id }, process.env.JWT_SECRET_KEY, { expiresIn: '1h' });
+        res.header({token: token});
 
         return res.status(200).send({
             "success": true,
@@ -175,7 +184,7 @@ const loginUser = async(req,res) => {
 
 const logoutUser = async(req,res) => {
 
-    res.clearCookie("token");
+    
     return res.status(200).send({
         "success": true,
         "error_code": null,
